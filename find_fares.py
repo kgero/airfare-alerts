@@ -36,7 +36,7 @@ def print_key(d, key, tabs=0):
     return "    " * tabs + key + ": " + d[key] + "\n"
 
 
-def print_results(res):
+def print_results(res, airline_codes):
     """Return string of result details or None if no results."""
     if "tripOption" not in res["trips"].keys():
         return None
@@ -48,7 +48,8 @@ def print_results(res):
         for slice in trip["slice"]:
             for seg in slice["segment"]:
                 text += "duration: " + str(seg["duration"] / float(60)) + " hrs\n"
-                text += "flight.carrier: " + seg["flight"]["carrier"] + "\n"
+                airline = airline_codes[seg["flight"]["carrier"]]
+                text += "flight.carrier: " + airline + "\n"
                 for leg in seg["leg"]:
                     text += print_key(leg, "origin", tabs=1)
                     text += print_key(leg, "destination", tabs=1)
@@ -70,7 +71,6 @@ def find_fares(origin, dest, depart, comeback, maxprice, key):
     :param maxprice: string, dollar amaount, e.g. "USD250.00"
     :param key: string, google api key
     """
-
     data = {
         "request": {
             "passengers": {
@@ -106,14 +106,20 @@ def find_fares(origin, dest, depart, comeback, maxprice, key):
     return r.json()
 
 
-if __name__ == "__main__":
-
-    with open(".env", "r") as f:
-        env = {}
+def read_to_dict(filename):
+    with open(filename, "r") as f:
+        d = {}
         for line in f:
             key = line.split("=")[0]
             val = line.split("=")[1].strip()
-            env[key] = val
+            d[key] = val
+    return d
+
+
+if __name__ == "__main__":
+
+    env = read_to_dict(".env")
+    airlines = read_to_dict("airline_codes.txt")
 
     d = arrow.get(2013, 5, 5)
     c = d.shift(days=+4)
@@ -123,7 +129,7 @@ if __name__ == "__main__":
     res = find_fares("BOS", "LAX", "2017-09-01", "2017-10-01", "USD500.00",
                      env['apikey'])
 
-    msg = print_results(res)
+    msg = print_results(res, airlines)
 
     if len(sys.argv) < 2:
         sys.exit("no recipient email --> no email sent")
